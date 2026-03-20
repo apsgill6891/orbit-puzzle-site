@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kites — a new daily-style logic toy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero card">
+        <p class="eyebrow">A radically new LinkedIn-style puzzle pitch</p>
+        <div class="hero-copy">
+          <div>
+            <h1>Kites</h1>
+            <p class="lede">
+              Place one kite in every row and column. Each kite points into the wind and sends a
+              gust until it hits the edge or another kite. Numbered clouds tell you how many gusts
+              sweep across them.
+            </p>
+          </div>
+          <div class="controls">
+            <label class="select-wrap" for="theme-select">
+              <span>Theme</span>
+              <select id="theme-select" aria-label="Select theme">
+                <option value="dark">Dark</option>
+                <option value="light">Day</option>
+              </select>
+            </label>
+            <label class="select-wrap" for="puzzle-select">
+              <span>Puzzle</span>
+              <select id="puzzle-select" aria-label="Select puzzle"></select>
+            </label>
+            <button id="reset-btn" class="secondary">Reset board</button>
+            <button id="hint-btn" class="secondary">Show one hint</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="layout">
+        <section class="board-panel card">
+          <div class="board-header">
+            <div>
+              <h2>Fly the kites</h2>
+              <p>Click an empty square to cycle through ↑ → ↓ ← and a small note marker.</p>
+              <p id="solution-note" class="subtle-note"></p>
+            </div>
+            <div id="status-pill" class="status-pill">Find a valid wind pattern.</div>
+          </div>
+
+          <div id="column-targets" class="targets targets-columns" aria-hidden="true"></div>
+
+          <div class="board-wrap">
+            <div id="row-targets" class="targets targets-rows" aria-hidden="true"></div>
+            <div id="board" class="board" role="grid" aria-label="Kites puzzle board"></div>
+          </div>
+
+          <div class="toolbar">
+            <button id="check-btn">Check progress</button>
+            <button id="solve-btn" class="ghost">Reveal solution</button>
+          </div>
+        </section>
+
+        <aside class="sidebar card">
+          <section>
+            <h2>Rules</h2>
+            <ol>
+              <li>Place <strong>exactly one kite</strong> in each row.</li>
+              <li>Place <strong>exactly one kite</strong> in each column.</li>
+              <li>Each kite points <strong>up, right, down, or left</strong>.</li>
+              <li>A kite’s gust travels until the <strong>board edge or another kite</strong>.</li>
+              <li>Each cloud number tells you exactly how many gusts cross that square.</li>
+            </ol>
+          </section>
+
+          <section>
+            <h2>Why it is new</h2>
+            <p>
+              Kites is not just a placement puzzle. You are deducing both <strong>where</strong> each
+              kite sits and <strong>which way it points</strong>, while every choice changes the reach of
+              other gusts because kites block trails.
+            </p>
+          </section>
+
+          <section>
+            <h2>Solution policy</h2>
+            <p>
+              The checker now accepts <strong>any valid arrangement</strong> that satisfies the
+              visible rules. Hint and reveal still show one authored example path.
+            </p>
+          </section>
+
+          <section class="legend">
+            <h2>Legend</h2>
+            <div><span class="legend-chip cloud">2</span> Cloud clue</div>
+            <div><span class="legend-chip kite">↑</span> Kite</div>
+            <div><span class="legend-chip gust">1</span> Current gust count</div>
+            <div><span class="legend-chip note">•</span> Pencil note</div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
