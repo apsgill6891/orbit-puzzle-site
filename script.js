@@ -1,49 +1,87 @@
+const directions = ['up', 'right', 'down', 'left'];
+const cycleOrder = ['empty', ...directions, 'note'];
+const arrowByDirection = {
+  up: '↑',
+  right: '→',
+  down: '↓',
+  left: '←',
+};
+const deltas = {
+  up: [-1, 0],
+  right: [0, 1],
+  down: [1, 0],
+  left: [0, -1],
+};
+
 const puzzles = [
   {
-    id: 'starter',
-    name: 'Starter Orbit',
+    id: 'crosswind',
+    name: 'Crosswind',
     size: 5,
-    solution: [0, 2, 4, 1, 3],
-    planets: [
-      [0, 1],
-      [1, 4],
+    solution: [
+      { col: 2, dir: 'down' },
+      { col: 0, dir: 'right' },
+      { col: 3, dir: 'up' },
+      { col: 1, dir: 'right' },
+      { col: 4, dir: 'left' },
+    ],
+    clouds: [
+      [0, 3],
+      [1, 2],
+      [1, 3],
       [2, 2],
-      [3, 4],
+      [3, 2],
       [4, 0],
       [4, 2],
     ],
   },
   {
-    id: 'breeze',
-    name: 'Morning Breeze',
+    id: 'switchback',
+    name: 'Switchback',
     size: 5,
-    solution: [1, 4, 2, 0, 3],
-    planets: [
-      [0, 3],
-      [1, 0],
-      [2, 4],
-      [3, 2],
-      [4, 1],
+    solution: [
+      { col: 3, dir: 'left' },
+      { col: 1, dir: 'down' },
+      { col: 4, dir: 'left' },
+      { col: 2, dir: 'up' },
+      { col: 0, dir: 'right' },
+    ],
+    clouds: [
+      [0, 1],
+      [0, 2],
+      [1, 2],
       [2, 1],
+      [2, 2],
+      [2, 3],
+      [4, 3],
     ],
   },
   {
-    id: 'twirl',
-    name: 'Gentle Twirl',
+    id: 'tailwind',
+    name: 'Tailwind',
     size: 5,
-    solution: [2, 0, 3, 1, 4],
-    planets: [
+    solution: [
+      { col: 4, dir: 'left' },
+      { col: 1, dir: 'down' },
+      { col: 3, dir: 'left' },
+      { col: 0, dir: 'up' },
+      { col: 2, dir: 'right' },
+    ],
+    clouds: [
       [0, 0],
-      [1, 2],
-      [2, 4],
-      [3, 3],
-      [4, 1],
+      [0, 1],
+      [0, 2],
+      [1, 0],
+      [2, 0],
       [2, 1],
+      [4, 3],
     ],
   },
 ];
 
 const board = document.querySelector('#board');
+const rowTargets = document.querySelector('#row-targets');
+const columnTargets = document.querySelector('#column-targets');
 const puzzleSelect = document.querySelector('#puzzle-select');
 const statusPill = document.querySelector('#status-pill');
 const resetBtn = document.querySelector('#reset-btn');
@@ -55,32 +93,34 @@ let activePuzzle = puzzles[0];
 let cellStates = [];
 let hintCells = new Set();
 
-function computePlanetClues(puzzle) {
-  const satellites = puzzle.solution.map((col, row) => `${row},${col}`);
-  const satelliteSet = new Set(satellites);
+function computeTrailCounts(solution, size) {
+  const counts = Array.from({ length: size }, () => Array(size).fill(0));
+  const kiteMap = new Map(solution.map((kite, row) => [`${row},${kite.col}`, kite.dir]));
 
-  return puzzle.planets.map(([row, col]) => {
-    let count = 0;
+  solution.forEach((kite, row) => {
+    const [dr, dc] = deltas[kite.dir];
+    let currentRow = row + dr;
+    let currentCol = kite.col + dc;
 
-    for (let dr = -1; dr <= 1; dr += 1) {
-      for (let dc = -1; dc <= 1; dc += 1) {
-        if (dr === 0 && dc === 0) {
-          continue;
-        }
-
-        const key = `${row + dr},${col + dc}`;
-        if (satelliteSet.has(key)) {
-          count += 1;
-        }
-      }
+    while (
+      currentRow >= 0 &&
+      currentRow < size &&
+      currentCol >= 0 &&
+      currentCol < size &&
+      !kiteMap.has(`${currentRow},${currentCol}`)
+    ) {
+      counts[currentRow][currentCol] += 1;
+      currentRow += dr;
+      currentCol += dc;
     }
-
-    return { row, col, count };
   });
+
+  return counts;
 }
 
 puzzles.forEach((puzzle) => {
-  puzzle.planetClues = computePlanetClues(puzzle);
+  const trailCounts = computeTrailCounts(puzzle.solution, puzzle.size);
+  puzzle.cloudClues = puzzle.clouds.map(([row, col]) => ({ row, col, count: trailCounts[row][col] }));
 });
 
 function buildSelector() {
@@ -89,24 +129,99 @@ function buildSelector() {
     .join('');
 }
 
-function getPlanetMap(puzzle) {
-  return new Map(puzzle.planetClues.map((planet) => [`${planet.row},${planet.col}`, planet.count]));
+function setStatus(message, tone = '') {
+  statusPill.textContent = message;
+  statusPill.className = 'status-pill';
+  if (tone) {
+    statusPill.classList.add(tone);
+  }
 }
 
+function createEmptyBoard(size) {
+  return Array.from({ length: size }, () => Array.from({ length: size }, () => 'empty'));
+}
 
-function resetBoard() {
-  cellStates = Array.from({ length: activePuzzle.size }, () =>
-    Array.from({ length: activePuzzle.size }, () => 'empty')
-  );
-  hintCells = new Set();
-  setStatus('Find the unique orbit.', '');
-  renderBoard();
+function getCloudMap(puzzle) {
+  return new Map(puzzle.cloudClues.map((cloud) => [`${cloud.row},${cloud.col}`, cloud.count]));
+}
+
+function getPlacedKites() {
+  const placed = [];
+  for (let row = 0; row < activePuzzle.size; row += 1) {
+    for (let col = 0; col < activePuzzle.size; col += 1) {
+      const value = cellStates[row][col];
+      if (directions.includes(value)) {
+        placed.push({ row, col, dir: value });
+      }
+    }
+  }
+  return placed;
+}
+
+function computeCurrentTrails() {
+  const placed = getPlacedKites();
+  const counts = Array.from({ length: activePuzzle.size }, () => Array(activePuzzle.size).fill(0));
+  const kiteMap = new Map(placed.map((kite) => [`${kite.row},${kite.col}`, kite.dir]));
+
+  placed.forEach((kite) => {
+    const [dr, dc] = deltas[kite.dir];
+    let currentRow = kite.row + dr;
+    let currentCol = kite.col + dc;
+
+    while (
+      currentRow >= 0 &&
+      currentRow < activePuzzle.size &&
+      currentCol >= 0 &&
+      currentCol < activePuzzle.size &&
+      !kiteMap.has(`${currentRow},${currentCol}`)
+    ) {
+      counts[currentRow][currentCol] += 1;
+      currentRow += dr;
+      currentCol += dc;
+    }
+  });
+
+  return counts;
+}
+
+function renderTargets(report) {
+  rowTargets.style.setProperty('--size', activePuzzle.size);
+  columnTargets.style.setProperty('--size', activePuzzle.size);
+  rowTargets.innerHTML = '';
+  columnTargets.innerHTML = '';
+
+  report.rowCounts.forEach((count) => {
+    const chip = document.createElement('div');
+    chip.className = 'target-chip';
+    chip.innerHTML = `<span><strong>${count}</strong>/1</span>`;
+    if (count === 1) {
+      chip.classList.add('good');
+    } else if (count > 1) {
+      chip.classList.add('warn');
+    }
+    rowTargets.appendChild(chip);
+  });
+
+  report.colCounts.forEach((count) => {
+    const chip = document.createElement('div');
+    chip.className = 'target-chip';
+    chip.innerHTML = `<span><strong>${count}</strong>/1</span>`;
+    if (count === 1) {
+      chip.classList.add('good');
+    } else if (count > 1) {
+      chip.classList.add('warn');
+    }
+    columnTargets.appendChild(chip);
+  });
 }
 
 function renderBoard() {
   board.style.setProperty('--size', activePuzzle.size);
   board.innerHTML = '';
-  const planetMap = getPlanetMap(activePuzzle);
+  const cloudMap = getCloudMap(activePuzzle);
+  const currentTrails = computeCurrentTrails();
+  const report = evaluateBoard();
+  renderTargets(report);
 
   for (let row = 0; row < activePuzzle.size; row += 1) {
     for (let col = 0; col < activePuzzle.size; col += 1) {
@@ -116,24 +231,37 @@ function renderBoard() {
       cell.setAttribute('role', 'gridcell');
       cell.setAttribute('aria-label', `Row ${row + 1} column ${col + 1}`);
 
-      const planetKey = `${row},${col}`;
-      if (planetMap.has(planetKey)) {
-        cell.classList.add('planet');
-        cell.textContent = planetMap.get(planetKey);
+      const key = `${row},${col}`;
+      const cloudCount = cloudMap.get(key);
+      const trailCount = currentTrails[row][col];
+
+      if (cloudMap.has(key)) {
+        cell.classList.add('cloud');
+        cell.textContent = cloudCount;
+        const now = document.createElement('span');
+        now.className = 'cloud-now';
+        now.textContent = `now ${trailCount}`;
+        cell.appendChild(now);
         cell.disabled = true;
       } else {
         const value = cellStates[row][col];
-        if (value === 'satellite') {
-          cell.classList.add('satellite');
-          cell.textContent = '✦';
+        if (directions.includes(value)) {
+          cell.classList.add('kite');
+          cell.textContent = arrowByDirection[value];
         } else if (value === 'note') {
           cell.classList.add('note');
           cell.textContent = '•';
-        } else {
-          cell.textContent = '';
         }
 
-        if (hintCells.has(planetKey)) {
+        if (trailCount > 0) {
+          cell.classList.add('trail');
+          const countBadge = document.createElement('span');
+          countBadge.className = 'trail-count';
+          countBadge.textContent = trailCount;
+          cell.appendChild(countBadge);
+        }
+
+        if (hintCells.has(key)) {
           cell.classList.add('hint');
         }
 
@@ -145,87 +273,58 @@ function renderBoard() {
   }
 }
 
-function cycleCell(row, col) {
-  const current = cellStates[row][col];
-  cellStates[row][col] = current === 'empty' ? 'satellite' : current === 'satellite' ? 'note' : 'empty';
-  hintCells.delete(`${row},${col}`);
+function resetBoard() {
+  cellStates = createEmptyBoard(activePuzzle.size);
+  hintCells = new Set();
+  setStatus('Find the hidden wind pattern.');
   renderBoard();
 }
 
-function setStatus(message, tone) {
-  statusPill.textContent = message;
-  statusPill.className = 'status-pill';
-  if (tone) {
-    statusPill.classList.add(tone);
-  }
-}
+function cycleCell(row, col) {
+  const currentIndex = cycleOrder.indexOf(cellStates[row][col]);
+  cellStates[row][col] = cycleOrder[(currentIndex + 1) % cycleOrder.length];
+  hintCells.delete(`${row},${col}`);
+  renderBoard();
 
-function getSatellitePositions() {
-  const positions = [];
-  for (let row = 0; row < activePuzzle.size; row += 1) {
-    for (let col = 0; col < activePuzzle.size; col += 1) {
-      if (cellStates[row][col] === 'satellite') {
-        positions.push({ row, col });
-      }
-    }
+  if (evaluateBoard().isSolved) {
+    setStatus('Perfect flight path! You solved it.', 'good');
   }
-  return positions;
 }
 
 function evaluateBoard() {
-  const satellites = getSatellitePositions();
-  const size = activePuzzle.size;
+  const placed = getPlacedKites();
+  const rowCounts = Array.from({ length: activePuzzle.size }, () => 0);
+  const colCounts = Array.from({ length: activePuzzle.size }, () => 0);
 
-  const rowCounts = Array.from({ length: size }, () => 0);
-  const colCounts = Array.from({ length: size }, () => 0);
-
-  satellites.forEach(({ row, col }) => {
-    rowCounts[row] += 1;
-    colCounts[col] += 1;
+  placed.forEach((kite) => {
+    rowCounts[kite.row] += 1;
+    colCounts[kite.col] += 1;
   });
 
-  const badRows = rowCounts.filter((count) => count > 1).length;
-  const badCols = colCounts.filter((count) => count > 1).length;
+  const currentTrails = computeCurrentTrails();
+  const cloudProblems = activePuzzle.cloudClues.filter(
+    (cloud) => currentTrails[cloud.row][cloud.col] !== cloud.count
+  );
 
-  let touchingPairs = 0;
-  satellites.forEach((a, index) => {
-    satellites.slice(index + 1).forEach((b) => {
-      if (Math.abs(a.row - b.row) <= 1 && Math.abs(a.col - b.col) <= 1) {
-        touchingPairs += 1;
-      }
-    });
-  });
-
-  const planetProblems = activePuzzle.planetClues.filter((planet) => {
-    let count = 0;
-    satellites.forEach((satellite) => {
-      if (
-        Math.abs(satellite.row - planet.row) <= 1 &&
-        Math.abs(satellite.col - planet.col) <= 1 &&
-        !(satellite.row === planet.row && satellite.col === planet.col)
-      ) {
-        count += 1;
-      }
-    });
-    return count !== planet.count;
-  });
+  const wrongKites = placed.filter((kite) => {
+    const correct = activePuzzle.solution[kite.row];
+    return correct.col !== kite.col || correct.dir !== kite.dir;
+  }).length;
 
   const isSolved =
-    satellites.length === size &&
+    placed.length === activePuzzle.size &&
     rowCounts.every((count) => count === 1) &&
     colCounts.every((count) => count === 1) &&
-    touchingPairs === 0 &&
-    planetProblems.length === 0;
+    cloudProblems.length === 0 &&
+    wrongKites === 0;
 
   return {
-    isSolved,
-    satellites,
+    placed,
     rowCounts,
     colCounts,
-    badRows,
-    badCols,
-    touchingPairs,
-    planetProblems,
+    cloudProblems,
+    wrongKites,
+    isSolved,
   };
 }
 
@@ -233,63 +332,67 @@ function checkBoard() {
   const report = evaluateBoard();
 
   if (report.isSolved) {
-    setStatus('Perfect orbit! You solved it.', 'good');
+    setStatus('Perfect flight path! You solved it.', 'good');
     return;
   }
 
-  const hints = [];
-
-  if (report.badRows) {
-    hints.push('A row has too many satellites.');
-  }
-  if (report.badCols) {
-    hints.push('A column has too many satellites.');
-  }
-  if (report.touchingPairs) {
-    hints.push('Two satellites are touching.');
-  }
-  if (report.planetProblems.length) {
-    hints.push('At least one planet clue is off.');
-  }
-  if (report.satellites.length < activePuzzle.size) {
-    hints.push('You still need more satellites.');
+  if (report.rowCounts.some((count) => count > 1)) {
+    setStatus('At least one row has too many kites.', 'warn');
+    return;
   }
 
-  setStatus(hints[0] || 'Keep going — the orbit is close.', 'warn');
+  if (report.colCounts.some((count) => count > 1)) {
+    setStatus('At least one column has too many kites.', 'warn');
+    return;
+  }
+
+  if (report.cloudProblems.length) {
+    setStatus('A cloud clue does not match the current gusts.', 'warn');
+    return;
+  }
+
+  if (report.placed.length < activePuzzle.size) {
+    setStatus('You still need to place more kites.', 'warn');
+    return;
+  }
+
+  setStatus('Some kite directions or positions are still off.', 'bad');
 }
 
 function showHint() {
   const report = evaluateBoard();
   if (report.isSolved) {
-    setStatus('Already solved — try another puzzle.', 'good');
+    setStatus('Already solved — switch to another puzzle.', 'good');
     return;
   }
 
   for (let row = 0; row < activePuzzle.size; row += 1) {
-    const solutionCol = activePuzzle.solution[row];
-    const current = cellStates[row][solutionCol];
+    const correct = activePuzzle.solution[row];
+    const current = cellStates[row][correct.col];
 
-    if (current !== 'satellite') {
-      cellStates[row][solutionCol] = 'satellite';
-      hintCells = new Set([`${row},${solutionCol}`]);
+    if (current !== correct.dir) {
+      cellStates[row][correct.col] = correct.dir;
+      hintCells = new Set([`${row},${correct.col}`]);
       renderBoard();
-      setStatus(`Hint: row ${row + 1} needs a satellite in column ${solutionCol + 1}.`, 'good');
+      setStatus(
+        `Hint: row ${row + 1} hides a ${arrowByDirection[correct.dir]} kite in column ${correct.col + 1}.`,
+        'good'
+      );
       return;
     }
   }
 
-  setStatus('All solution satellites are already placed.', 'good');
+  setStatus('Every correct kite is already visible.', 'good');
 }
 
 function revealSolution() {
-  cellStates = Array.from({ length: activePuzzle.size }, (_, row) =>
-    Array.from({ length: activePuzzle.size }, (_, col) =>
-      activePuzzle.solution[row] === col ? 'satellite' : 'empty'
-    )
-  );
+  cellStates = createEmptyBoard(activePuzzle.size);
+  activePuzzle.solution.forEach((kite, row) => {
+    cellStates[row][kite.col] = kite.dir;
+  });
   hintCells = new Set();
   renderBoard();
-  setStatus('Solution revealed. Try solving the next one from scratch!', 'warn');
+  setStatus('Solution revealed. Try a new breeze next.', 'warn');
 }
 
 function selectPuzzle(id) {

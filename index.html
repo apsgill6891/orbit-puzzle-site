@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Orbit — a tiny daily-style puzzle</title>
+    <title>Kites — a new daily-style logic toy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,13 +15,14 @@
   <body>
     <main class="app-shell">
       <section class="hero card">
-        <p class="eyebrow">A fresh LinkedIn-style logic toy</p>
+        <p class="eyebrow">A radically new LinkedIn-style puzzle pitch</p>
         <div class="hero-copy">
           <div>
-            <h1>Orbit</h1>
+            <h1>Kites</h1>
             <p class="lede">
-              Place satellites so every row and column has one, satellites never touch,
-              and each planet’s number matches the satellites in its surrounding ring.
+              Place one kite in every row and column. Each kite points into the wind and sends a
+              gust until it hits the edge or another kite. Numbered clouds tell you how many gusts
+              sweep across them.
             </p>
           </div>
           <div class="controls">
@@ -39,13 +40,18 @@
         <section class="board-panel card">
           <div class="board-header">
             <div>
-              <h2>Play grid</h2>
-              <p>Click a square to cycle through empty, satellite, and note.</p>
+              <h2>Fly the kites</h2>
+              <p>Click an empty square to cycle through ↑ → ↓ ← and a small note marker.</p>
             </div>
-            <div id="status-pill" class="status-pill">Find the unique orbit.</div>
+            <div id="status-pill" class="status-pill">Find the hidden wind pattern.</div>
           </div>
 
-          <div id="board" class="board" role="grid" aria-label="Orbit puzzle board"></div>
+          <div id="column-targets" class="targets targets-columns" aria-hidden="true"></div>
+
+          <div class="board-wrap">
+            <div id="row-targets" class="targets targets-rows" aria-hidden="true"></div>
+            <div id="board" class="board" role="grid" aria-label="Kites puzzle board"></div>
+          </div>
 
           <div class="toolbar">
             <button id="check-btn">Check progress</button>
@@ -57,25 +63,28 @@
           <section>
             <h2>Rules</h2>
             <ol>
-              <li>Place <strong>exactly one satellite</strong> in each row.</li>
-              <li>Place <strong>exactly one satellite</strong> in each column.</li>
-              <li>Satellites <strong>cannot touch</strong>, even diagonally.</li>
-              <li>Each numbered planet counts satellites in the <strong>8 surrounding cells</strong>.</li>
+              <li>Place <strong>exactly one kite</strong> in each row.</li>
+              <li>Place <strong>exactly one kite</strong> in each column.</li>
+              <li>Each kite points <strong>up, right, down, or left</strong>.</li>
+              <li>A kite’s gust travels until the <strong>board edge or another kite</strong>.</li>
+              <li>Each cloud number tells you exactly how many gusts cross that square.</li>
             </ol>
           </section>
 
           <section>
-            <h2>Why it feels new</h2>
+            <h2>Why it is new</h2>
             <p>
-              Orbit mixes the row-and-column elegance of Queens with a tiny
-              Minesweeper-style clue ring, so the deduction is familiar but the flow feels novel.
+              Kites is not just a placement puzzle. You are deducing both <strong>where</strong> each
+              kite sits and <strong>which way it points</strong>, while every choice changes the reach of
+              other gusts because kites block trails.
             </p>
           </section>
 
           <section class="legend">
             <h2>Legend</h2>
-            <div><span class="legend-chip planet">2</span> Planet clue</div>
-            <div><span class="legend-chip satellite">✦</span> Satellite</div>
+            <div><span class="legend-chip cloud">2</span> Cloud clue</div>
+            <div><span class="legend-chip kite">↑</span> Kite</div>
+            <div><span class="legend-chip gust">1</span> Current gust count</div>
             <div><span class="legend-chip note">•</span> Pencil note</div>
           </section>
         </aside>
