@@ -1,3 +1,5 @@
+// © 2026 Anmolpreet Singh Gill. All rights reserved.
+
 const directions = ['up', 'right', 'down', 'left'];
 const cycleOrder = ['empty', ...directions, 'note'];
 const arrowByDirection = {
