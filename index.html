@@ -26,6 +26,13 @@
             </p>
           </div>
           <div class="controls">
+            <label class="select-wrap" for="theme-select">
+              <span>Theme</span>
+              <select id="theme-select" aria-label="Select theme">
+                <option value="dark">Dark</option>
+                <option value="light">Day</option>
+              </select>
+            </label>
             <label class="select-wrap" for="puzzle-select">
               <span>Puzzle</span>
               <select id="puzzle-select" aria-label="Select puzzle"></select>
@@ -42,8 +49,9 @@
             <div>
               <h2>Fly the kites</h2>
               <p>Click an empty square to cycle through ↑ → ↓ ← and a small note marker.</p>
+              <p id="solution-note" class="subtle-note"></p>
             </div>
-            <div id="status-pill" class="status-pill">Find the hidden wind pattern.</div>
+            <div id="status-pill" class="status-pill">Find a valid wind pattern.</div>
           </div>
 
           <div id="column-targets" class="targets targets-columns" aria-hidden="true"></div>
@@ -80,6 +88,14 @@
             </p>
           </section>
 
+          <section>
+            <h2>Solution policy</h2>
+            <p>
+              The checker now accepts <strong>any valid arrangement</strong> that satisfies the
+              visible rules. Hint and reveal still show one authored example path.
+            </p>
+          </section>
+
           <section class="legend">
             <h2>Legend</h2>
             <div><span class="legend-chip cloud">2</span> Cloud clue</div>
@@ -94,4 +110,3 @@
     <script src="script.js"></script>
   </body>
 </html>
-<!-- redeploy trigger -->

@@ -34,6 +34,7 @@ const puzzles = [
       [4, 0],
       [4, 2],
     ],
+    solutionCount: 2,
   },
   {
     id: 'switchback',
@@ -55,6 +56,7 @@ const puzzles = [
       [2, 3],
       [4, 3],
     ],
+    solutionCount: 4,
   },
   {
     id: 'tailwind',
@@ -76,22 +78,39 @@ const puzzles = [
       [2, 1],
       [4, 3],
     ],
+    solutionCount: 4,
   },
 ];
 
 const board = document.querySelector('#board');
 const rowTargets = document.querySelector('#row-targets');
 const columnTargets = document.querySelector('#column-targets');
+const themeSelect = document.querySelector('#theme-select');
 const puzzleSelect = document.querySelector('#puzzle-select');
 const statusPill = document.querySelector('#status-pill');
+const solutionNote = document.querySelector('#solution-note');
 const resetBtn = document.querySelector('#reset-btn');
 const hintBtn = document.querySelector('#hint-btn');
 const checkBtn = document.querySelector('#check-btn');
 const solveBtn = document.querySelector('#solve-btn');
 
+const themeStorageKey = 'kites-theme';
+
 let activePuzzle = puzzles[0];
 let cellStates = [];
 let hintCells = new Set();
+
+function applyTheme(theme) {
+  const nextTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = nextTheme;
+  themeSelect.value = nextTheme;
+  localStorage.setItem(themeStorageKey, nextTheme);
+}
+
+function initializeTheme() {
+  const storedTheme = localStorage.getItem(themeStorageKey);
+  applyTheme(storedTheme || 'dark');
+}
 
 function computeTrailCounts(solution, size) {
   const counts = Array.from({ length: size }, () => Array(size).fill(0));
@@ -127,6 +146,14 @@ function buildSelector() {
   puzzleSelect.innerHTML = puzzles
     .map((puzzle) => `<option value="${puzzle.id}">${puzzle.name}</option>`)
     .join('');
+}
+
+function renderSolutionNote() {
+  const count = activePuzzle.solutionCount;
+  solutionNote.textContent =
+    count === 1
+      ? 'This puzzle has one known valid solution.'
+      : `This puzzle currently has ${count} valid solutions. Any of them counts.`;
 }
 
 function setStatus(message, tone = '') {
@@ -276,7 +303,8 @@ function renderBoard() {
 function resetBoard() {
   cellStates = createEmptyBoard(activePuzzle.size);
   hintCells = new Set();
-  setStatus('Find the hidden wind pattern.');
+  setStatus('Find a valid wind pattern.');
+  renderSolutionNote();
   renderBoard();
 }
 
@@ -306,24 +334,17 @@ function evaluateBoard() {
     (cloud) => currentTrails[cloud.row][cloud.col] !== cloud.count
   );
 
-  const wrongKites = placed.filter((kite) => {
-    const correct = activePuzzle.solution[kite.row];
-    return correct.col !== kite.col || correct.dir !== kite.dir;
-  }).length;
-
   const isSolved =
     placed.length === activePuzzle.size &&
     rowCounts.every((count) => count === 1) &&
     colCounts.every((count) => count === 1) &&
-    cloudProblems.length === 0 &&
-    wrongKites === 0;
+    cloudProblems.length === 0;
 
   return {
     placed,
     rowCounts,
     colCounts,
     cloudProblems,
-    wrongKites,
     isSolved,
   };
 }
@@ -356,8 +377,9 @@ function checkBoard() {
     return;
   }
 
-  setStatus('Some kite directions or positions are still off.', 'bad');
+  setStatus('Keep refining the wind pattern.', 'bad');
 }
+
 
 function showHint() {
   const report = evaluateBoard();
@@ -401,7 +423,9 @@ function selectPuzzle(id) {
 }
 
 buildSelector();
+initializeTheme();
 puzzleSelect.value = activePuzzle.id;
+themeSelect.addEventListener('change', (event) => applyTheme(event.target.value));
 puzzleSelect.addEventListener('change', (event) => selectPuzzle(event.target.value));
 resetBtn.addEventListener('click', resetBoard);
 hintBtn.addEventListener('click', showHint);
